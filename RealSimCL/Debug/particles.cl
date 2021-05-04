@@ -113,10 +113,10 @@ Particle( global point *dPobj, global vector *dVel, global color *dCobj, global 
 	int		NUM_PARTICLES = 512*16;
 	float	box_size = 20.0;			// 15 - 20
 	struct	table tab[1];
-	float	mass = 0.1;					// particle mass
+	float	mass = 0.2;					// particle mass
 	float	k_constant = 0.0000001;		// 100 - 1000 as book said
 	float	rest_density_for_liquid = 20.;
-	float	viscosity_constant = 0.00000000015f;
+	float	viscosity_constant = 0.0000000002f;
 
 	// get position and velocity and density
 	point	p = dPobj[gid];
@@ -140,7 +140,7 @@ Particle( global point *dPobj, global vector *dVel, global color *dCobj, global 
 	
 
 	// if is fluid
-	if (gid < 512*8){
+	if (gid < 4096 && gid > 0) {
     dCobj[gid].z -= 0.001;
 		/////// compute fluid density
 		float sum_density = 0.f;
@@ -226,9 +226,10 @@ Particle( global point *dPobj, global vector *dVel, global color *dCobj, global 
     }
     if (minD < 20) {
       vector r = p_end - dPobj[minId];
-      vector n = dPobj[minId] - Sphere1;
+      vector n = dCobj[minId];
       if (dot(r.xyz, n.xyz) < 0) {
-        v_end = BounceSphere(p, v, Sphere1);
+        // v_end = BounceSphere(p, v, Sphere1);
+        v_end = Bounce(v, n);
         p_end = p + v_end*dTime + f/mass*(point)(0.5*dTime*dTime);
       }
     }

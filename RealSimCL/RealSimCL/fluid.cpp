@@ -1,5 +1,8 @@
 #include "fluid.h"
 #include <iostream>
+#include <string>
+
+// using namespace std;
 
 
 const char *WINDOWTITLE = { "RealSimCL" };
@@ -8,8 +11,8 @@ const char *GLUITITLE = { "Panel" };
 
 const int NUM_PARTICLES = 512 * 16;		// 1k - 1k * 2^12
 const int LOCAL_SIZE = 256;				// 8 - 512
-const char *CL_FILE_NAME = { "D:\\studies\\CIS-660\\Authoring Tool\\RealSim\\RealSimCL\\Debug\\particles.cl" };
-const char *CL_BINARY_NAME = { "D:\\studies\\CIS-660\\Authoring Tool\\RealSim\\RealSimCL\\Debug\\particles.nv" };
+std::string CL_FILE_NAME;
+std::string CL_BINARY_NAME;
 const float box_size = 50.f;		// l x w x h
 const int GLUITRUE = { true };
 const int GLUIFALSE = { false };
@@ -55,9 +58,9 @@ GLuint			hCobj;
 cl_mem			dPobj;
 cl_mem			dCobj;
 struct xyzw *hVel;
-struct xyzw particles[NUM_PARTICLES / 2];
-struct xyzw points[NUM_PARTICLES / 2];
-struct xyzw normals[NUM_PARTICLES / 2];
+
+struct xyzw solid_points[NUM_PARTICLES];
+struct xyzw solid_normals[NUM_PARTICLES / 2];
 
 float *Density;
 struct xyzw *pressure;
@@ -76,22 +79,31 @@ cl_platform_id		PlatformID;
 
 int Simulate(int argc, char **argv)
 {
-	for (int i = 0; i < NUM_PARTICLES / 2; i++) {
-		scanf("%f %f %f", &points[i].x, &points[i].y, &points[i].z);
-		points[i].w = 1.;
+	std::string root;
+	std::getline(std::cin, root);
+	CL_FILE_NAME = root + "/RealSimCL/Debug/particles.cl";
+	CL_BINARY_NAME = root + "/RealSimCL/Debug/particles.nv";
+
+	float y_scale;
+	scanf("%f", &y_scale);
+
+	for (int i = NUM_PARTICLES / 2; i < NUM_PARTICLES; i++) {
+		scanf("%f %f %f", &solid_points[i].x, &solid_points[i].y, &solid_points[i].z);
+		solid_points[i].w = 1.;
 		//printf("%f, %f, %f, %f\n", points[i].x, points[i].y, points[i].z, points[i].w);
 	}
 	for (int i = 0; i < NUM_PARTICLES / 2; i++) {
-		scanf("%f %f %f", &normals[i].x, &normals[i].y, &normals[i].z);
-		normals[i].w = 1.;
+		scanf("%f %f %f", &solid_normals[i].x, &solid_normals[i].y, &solid_normals[i].z);
+		solid_normals[i].w = 1.;
 		//printf("%f, %f, %f, %f\n", normals[i].x, normals[i].y, normals[i].z, normals[i].w);
 	}
+	printf("%f\n", y_scale);
 	glutInit(&argc, argv);
 	InitGraphics();
 	InitLists();
 	InitCL();
 	Reset();
-	InitGlui();
+	//InitGlui();
 	GLUI_Master.set_glutIdleFunc(Animate);
 	//glutHideWindow();
 	//float x = 0;
@@ -128,7 +140,7 @@ void Animate()
 		printf("Error: Failed to read output array! %d\n", err);
 		exit(1);
 	}
-	for (int i = 0; i < 4 * NUM_PARTICLES / 16; i += 4) {
+	for (int i = 0; i < 4 * (NUM_PARTICLES / 2); i += 4) {
 		printf("%f, %f, %f\n", tmp[i], tmp[i + 1], tmp[i + 2]);
 	}
 	//printf("%d: %f, %f, %f, %f\n", frame, tmp[0], tmp[1], tmp[2], tmp[3]);
@@ -161,7 +173,7 @@ void Animate()
 	glutSetWindow(MainWindow);
 	glutPostRedisplay();
 
-	if (++frame == 50) {
+	if (++frame == 800) {
 		glutLeaveMainLoop();
 	}
 }
@@ -244,7 +256,7 @@ void Display()
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-	gluLookAt(0., 200., 1000., 0., 200., 0., 0., 1., 0.);
+	gluLookAt(0., 50., 500., 0., 200., 0., 0., 1., 0.);
 	glTranslatef((GLfloat)TransXYZ[0], (GLfloat)TransXYZ[1], (GLfloat)TransXYZ[2]);
 	glRotatef((GLfloat)Yrot, 0., 1., 0.);
 	glRotatef((GLfloat)Xrot, 1., 0., 0.);
@@ -349,7 +361,7 @@ void InitCL()
 	// see if we can even open the opencl Kernel Program
 	// (no point going on if we can't):
 
-	FILE *fp = fopen(CL_FILE_NAME, "rb");
+	FILE *fp = fopen(CL_FILE_NAME.c_str(), "rb");
 	if (fp == NULL)
 	{
 		fprintf(stderr, "Cannot open OpenCL source file '%s'\n", CL_FILE_NAME);
@@ -742,23 +754,23 @@ void ResetParticles()
 	for (int i = 0; i < NUM_PARTICLES; i++)
 	{
 		if (i < NUM_PARTICLES / 2) {
-			particles[i].x = points[i].x = Ranf(-30, 30);
-			particles[i].y = points[i].y = Ranf(170., 420.);
-			particles[i].z = points[i].z = Ranf(-30, 30);
-			particles[i].w = points[i].w = 1.;
+			points[i].x = Ranf(-30, 30);
+			points[i].y = Ranf(170., 200.);
+			points[i].z = Ranf(-30, 30);
+			points[i].w = 1.;
 		}
 		else {
-			float theta = Ranf(0.f, pi * 2.f);
-			float fi = Ranf(0.f, pi * 2.f);
-			float r = 149.f;
-			points[i].x = r * sinf(theta) * cosf(fi);
-			points[i].y = r * sinf(theta) * sinf(fi);
-			points[i].z = r * cosf(theta);
-			points[i].w = 1.;
-			//points[i].x = Ranf(-150.f, 150.f);
-			//points[i].y = Ranf(-150.f, 150.f);
-			//points[i].z = Ranf(-150.f, 150.f);
-			//points[i].w = 1.f;
+			//float theta = Ranf(0.f, pi * 2.f);
+			//float fi = Ranf(0.f, pi * 2.f);
+			//float r = 149.f;
+			//points[i].x = r * sinf(theta) * cosf(fi);
+			//points[i].y = r * sinf(theta) * sinf(fi);
+			//points[i].z = r * cosf(theta);
+			//points[i].w = 1.;
+			points[i].x = solid_points[i].x;
+			points[i].y = solid_points[i].y;
+			points[i].z = solid_points[i].z;
+			points[i].w = solid_points[i].w;
 		}
 
 	}
@@ -776,9 +788,9 @@ void ResetParticles()
 			colors[i].a = 1.;
 		}
 		else {
-			colors[i].r = .5f;
-			colors[i].g = .5f;
-			colors[i].b = .5f;
+			colors[i].r = solid_normals[i - NUM_PARTICLES / 2].x;
+			colors[i].g = solid_normals[i - NUM_PARTICLES / 2].y;
+			colors[i].b = solid_normals[i - NUM_PARTICLES / 2].z;
 			colors[i].a = 1.;
 		}
 
