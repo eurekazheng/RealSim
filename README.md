@@ -1,4 +1,18 @@
-UPenn CIS-660 Authoring Tool by Shaoming Zheng and Yihui Mao
+UPenn CIS-660 Authoring Tool by *Shaoming Zheng* and *Yihui Mao*.
+
+# Demo
+
+![](demo/4.png)
+
+![](demo/5.png)
+
+![](demo/6.png)
+
+![](demo/7.png)
+
+![](demo/8.png)
+
+![](demo/9.png)
 
 # Setup
 
